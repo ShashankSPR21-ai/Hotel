@@ -285,7 +285,7 @@ export default function Home() {
                 className="bg-amber-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-700 transition shadow-md shadow-amber-600/20 flex items-center space-x-2 cursor-pointer"
               >
                 <Send className="h-4 w-4" />
-                <span>{submitting ? 'Sending...' : 'Send Feedback to Owner'}</span>
+                <span>{submitting ? 'Sending...' : 'Send Feedback'}</span>
               </button>
             </form>
           </div>
