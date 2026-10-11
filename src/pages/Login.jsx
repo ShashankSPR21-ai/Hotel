@@ -16,7 +16,7 @@ export default function Login() {
     setLoading(true);
 
     if (isSignUp) {
-      // --- SIGN UP LOGIC ---
+      // --- INSTANT SIGN UP LOGIC ---
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -27,25 +27,9 @@ export default function Login() {
         }
       });
 
-      setLoading(false);
-
-      if (error) {
-        alert('Sign up failed: ' + error.message);
-      } else {
-        if (role === 'employee') {
-          alert('Registration successful! Your staff account is pending approval from the store owner.');
-        } else {
-          alert('Account created successfully!');
-        }
-        setIsSignUp(false); // Switch back to login view
-      }
-    } else {
-      // --- LOGIN LOGIC ---
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
       if (error) {
         setLoading(false);
-        alert('Login failed: ' + error.message);
+        alert('Sign up failed: ' + error.message);
         return;
       }
 
@@ -61,18 +45,62 @@ export default function Login() {
       setLoading(false);
 
       if (roleError || !roleData) {
+        if (role === 'employee') {
+          alert('Staff account created! Note: It requires owner approval before staff features are fully accessible.');
+        } else {
+          alert('Account created successfully!');
+        }
+        navigate('/menu');
+        return;
+      }
+
+      // Check if employee needs approval
+      if (roleData.role === 'employee' && !roleData.approved) {
+        alert('Staff account created successfully! It is currently pending approval from the store owner.');
+        navigate('/menu');
+        return;
+      }
+
+      // Route based on role
+      if (roleData.role === 'owner') {
+        navigate('/admin/dashboard');
+      } else if (roleData.role === 'employee') {
+        navigate('/employee/orders');
+      } else {
+        navigate('/menu');
+      }
+
+    } else {
+      // --- LOGIN LOGIC ---
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        setLoading(false);
+        alert('Login failed: ' + error.message);
+        return;
+      }
+
+      const user = data.user;
+
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role, approved')
+        .eq('id', user.id)
+        .single();
+
+      setLoading(false);
+
+      if (roleError || !roleData) {
         alert('Role profile not found. Please contact the owner.');
         return;
       }
 
-      // Check if employee is approved by the owner
       if (roleData.role === 'employee' && !roleData.approved) {
         await supabase.auth.signOut();
         alert('Your staff account is still pending approval from the store owner. Please wait for confirmation.');
         return;
       }
 
-      // Route based on role
       if (roleData.role === 'owner') {
         navigate('/admin/dashboard');
       } else if (roleData.role === 'employee') {
@@ -103,7 +131,7 @@ export default function Login() {
             {isSignUp ? 'Register New Account' : 'Welcome Back'}
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            {isSignUp ? 'Choose your account type below' : 'Enter your credentials to continue'}
+            {isSignUp ? 'Enter your details and set your password' : 'Enter your credentials to continue'}
           </p>
         </div>
 
@@ -111,7 +139,7 @@ export default function Login() {
           {/* Role selection buttons (only shown when signing up) */}
           {isSignUp && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">I want to register as a:</label>
+              <label className="block text-sm font-semibold text-black mb-1">I want to register as a:</label>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <button
                   type="button"
@@ -140,14 +168,14 @@ export default function Login() {
               {role === 'employee' && (
                 <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl flex items-start space-x-2 text-xs text-amber-800 mb-2">
                   <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                  <span>Staff accounts require owner approval before you can log in.</span>
+                  <span>Staff accounts require store owner approval before you can access management features.</span>
                 </div>
               )}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label className="block text-sm font-semibold text-black mb-1">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
@@ -156,22 +184,23 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-amber-500 text-black font-semibold"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-semibold text-black mb-1">Create Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 type="password"
                 required
+                minLength="6"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-amber-500 text-black font-semibold"
               />
             </div>
           </div>
@@ -181,7 +210,7 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition shadow-lg shadow-amber-600/20 cursor-pointer"
           >
-            {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Login')}
+            {loading ? 'Processing...' : (isSignUp ? 'Create Account & Login' : 'Login')}
           </button>
         </form>
 
