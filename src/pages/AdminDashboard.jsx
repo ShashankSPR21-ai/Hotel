@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g., Paneer Tikka"
-                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 text-gray-900 font-semibold"
                 />
               </div>
 
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white"
+                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 bg-white text-gray-900 font-semibold"
                 >
                   <option value="Breakfast">Breakfast</option>
                   <option value="Lunch">Lunch</option>
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                   placeholder="150"
-                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 text-gray-900 font-semibold"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Short description of ingredients..."
-                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-amber-500 text-gray-900 font-semibold"
                 />
               </div>
 

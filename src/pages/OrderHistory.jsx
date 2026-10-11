@@ -1,69 +1,115 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, Package, AlertCircle, History, Home } from 'lucide-react';
+import { ArrowLeft, Package, AlertCircle, History, Home, Eye, XCircle } from 'lucide-react';
 
 export default function OrderHistory() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isStaff, setIsStaff] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let isMounted = true;
+  const fetchOrdersData = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
 
-    const fetchOrdersData = async () => {
-      try {
-        setLoading(true);
-        setErrorMessage(null);
-
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !authData?.user) {
-          if (isMounted) navigate('/login');
-          return;
-        }
-
-        const userId = authData.user.id;
-        const userEmail = authData.user.email;
-
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle();
-
-        const userIsStaff = 
-          (roleData && (roleData.role === 'owner' || roleData.role === 'employee')) || 
-          userEmail === 'owner@hotel.com';
-
-        if (isMounted) setIsStaff(userIsStaff);
-
-        let query = supabase.from('orders').select('*').order('created_at', { ascending: false });
-
-        if (!userIsStaff) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        if (isMounted) setOrders(data || []);
-      } catch (err) {
-        if (isMounted) setErrorMessage(err.message);
-      } finally {
-        if (isMounted) setLoading(false);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authData?.user) {
+        navigate('/login');
+        return;
       }
-    };
 
+      const userId = authData.user.id;
+      const userEmail = authData.user.email;
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const userIsStaff = 
+        (roleData && (roleData.role === 'owner' || roleData.role === 'employee')) || 
+        userEmail === 'owner@hotel.com';
+
+      setIsStaff(userIsStaff);
+
+      let query = supabase.from('orders').select('*').order('created_at', { ascending: false });
+
+      if (!userIsStaff) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setOrders(data || []);
+    } catch (err) {
+      setErrorMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchOrdersData();
 
+    // Real-time listener for order status changes
+    const ordersChannel = supabase
+      .channel('order-history-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchOrdersData();
+        }
+      )
+      .subscribe();
+
     return () => {
-      isMounted = false;
+      supabase.removeChannel(ordersChannel);
     };
-  }, [navigate]);
+  }, []);
+
+  const handleActionOrder = async (orderId) => {
+    if (isStaff) {
+      const reason = prompt('Enter reason for rejecting this order:');
+      if (reason === null) return; // User cancelled prompt
+
+      setCancellingId(orderId);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'Rejected', rejection_reason: reason })
+        .eq('id', orderId);
+
+      if (error) {
+        alert('Failed to reject order: ' + error.message);
+      } else {
+        fetchOrdersData();
+      }
+      setCancellingId(null);
+    } else {
+      if (!window.confirm('Are you sure you want to cancel this order?')) return;
+
+      setCancellingId(orderId);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'Cancelled' })
+        .eq('id', orderId);
+
+      if (error) {
+        alert('Failed to cancel order: ' + error.message);
+      } else {
+        fetchOrdersData();
+      }
+      setCancellingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -182,6 +228,34 @@ export default function OrderHistory() {
                     </div>
                   </div>
                 )}
+
+                {/* Actions: Track Status & Reject/Cancel Option */}
+                <div className="border-t pt-3 flex flex-wrap justify-between items-center gap-2">
+                  <Link
+                    to={`/order/${order.id}`}
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center space-x-1.5"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Track Live Status</span>
+                  </Link>
+
+                  {order.status === 'Pending' && (
+                    <button
+                      onClick={() => handleActionOrder(order.id)}
+                      disabled={cancellingId === order.id}
+                      className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-200 flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      <span>
+                        {cancellingId === order.id 
+                          ? 'Processing...' 
+                          : isStaff 
+                            ? 'Reject Order' 
+                            : 'Cancel Order'}
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

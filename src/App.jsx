@@ -4,7 +4,7 @@ import Menu from './pages/Menu';
 import Checkout from './pages/Checkout';
 import OrderStatus from './pages/OrderStatus';
 import Login from './pages/Login';
-import Register from './pages/Register'; // <-- Import Register page
+import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import OrderHistory from './pages/OrderHistory';
@@ -18,9 +18,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order-status/:id" element={<OrderStatus />} />
+            <Route path="/order/:id" element={<OrderStatus />} /> {/* <-- Updated route path */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} /> {/* <-- Add Register route */}
+            <Route path="/register" element={<Register />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/employee/orders" element={<EmployeeDashboard />} />
             <Route path="/my-orders" element={<OrderHistory />} />
